@@ -1,0 +1,115 @@
+---
+title: "Technical Exercise - genomicsplc"
+author: "Hazel.A.Fernando"
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+---
+
+# Genomics plc coding test
+
+This task relates to interpolating missing values in some raw data.
+The data used in this task represents, for example, a set of measurements
+of protein expression for individuals in a selection of cell types.
+For the purpose of the task, it has been determined that a reasonable methodological
+approach to interpolating missing data is to infer missing values as the average of all
+non-diagonal neighbouring values. 
+
+# Task
+
+Write a script, using a programming language of your choice which performs the task as follows:
+
+- Reads the supplied input file `./input_test_data.csv`
+- Writes out a new file named `<your name>_interpolated_data.csv`
+- The output file should be in csv format with the same values from the input data
+  where these are present, and missing values (represented as `nan`) from the input file
+  determined by taking the mean of all existing non-diagonal neighbouring values
+- The resulting `interpolated_data.csv` file should be returned to Genomics plc for checking
+- Please save and retain the code used to perform the task
+
+# Work-flow of task
+
+Calling in the data file. 
+```{r}
+
+test_data <- read.csv("input_test_data.csv", header = FALSE)
+
+test_data
+```
+
+Utilising for loops to create a function that finds the NaN values in the file, and checks its neighbouring non-diagonal cells, i.e. cells above, to the left, below, and to the right of the NaN cell. The function will then collate these neighbouring values and averages them, and then replaces the NaN cell with the new interpolated value. The function is also made to remove any neighbouring NaN cells from being included in the averaged value. 
+```{r}
+
+averaged_values <- function(measurements) {
+  rows <- nrow(measurements)
+  cols <- ncol(measurements)
+  
+  for (i in 1:rows) {
+    for (j in 1:cols) {
+      
+      if (is.nan(measurements[i, j])) {
+        
+        neighbouring_values <- c()
+        
+        if (i > 1) {
+          neighbouring_values <- c(neighbouring_values, measurements[i-1, j])   # value above the NaN cell if the cell is not in the first row.
+        }
+        
+        if (j > 1) {
+          neighbouring_values <- c(neighbouring_values, measurements[i, j-1])   # value to the left of the NaN cell if the cell is not in the first column.
+        }
+
+        if (i < rows) {
+          neighbouring_values <- c(neighbouring_values, measurements[i+1, j])   # value below the NaN cell if the cell is not in the last row.
+        }
+        
+        if (j < cols) {
+          neighbouring_values <- c(neighbouring_values, measurements[i, j+1])   # value to the right of the NaN cell if the cell is not in the last column.
+        }
+        
+        neighbouring_values <- neighbouring_values[!is.nan(neighbouring_values)]
+        
+        if (length(neighbouring_values) > 0) {
+          measurements[i, j] <- mean(neighbouring_values)
+        }
+      }
+    }
+  }
+  
+  return(measurements)
+}
+```
+
+The function is applied to the original test data.
+```{r}
+interpolated_data <- averaged_values(test_data)
+
+interpolated_data
+
+```
+
+The interpolated data is written into a new csv file. 
+```{r}
+write.csv(interpolated_data, "Hazel_Fernando_interpolated_data.csv", row.names = FALSE)
+
+```
+
+
+Testing scripts
+```{r}
+example_1 <- test_data[2,6]
+
+example_1
+
+neighbouring_values_example <- c(test_data[1,6],test_data[2,5],test_data[3,6],test_data[2,7])
+
+averaged_neighbouring_values_example <- mean(neighbouring_values_example)
+
+averaged_neighbouring_values_example
+
+example_1 <- averaged_neighbouring_values_example
+
+example_1 #replacing example missing value with the average of its neighbouring cells.  
+```
